@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+
+# Environment
+.env
+
+# SSL Certificates
+*.pem
+
+# Logs
+*.log
+
+# Models and cache
+models/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

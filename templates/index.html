@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Web Interface</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --border-color: #404040;
+            --input-bg: #3d3d3d;
+            --button-bg: #007bff;
+            --button-hover: #0056b3;
+            --code-bg: #000000;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container {
+            background-color: var(--container-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        h1 {
+            color: var(--text-color);
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+        textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+        button {
+            background-color: var(--button-bg);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: var(--button-hover);
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--text-color);
+        }
+        .error {
+            color: #ff4444;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ff4444;
+            border-radius: 4px;
+            display: none;
+        }
+        .api-example {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--code-bg);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+        .api-example pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #00ff00;
+        }
+        .api-example h3 {
+            color: var(--text-color);
+            margin-top: 0;
+        }
+        .copy-button {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .copy-button:hover {
+            background-color: var(--container-bg);
+        }
+        .language-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .language-controls select {
+            flex: 1;
+        }
+        .swap-languages {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .swap-languages:hover {
+            background-color: var(--container-bg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Translation Web Interface</h1>
+        
+        <div class="section">
+            <div class="language-controls">
+                <select id="fromLang" onchange="updateApiExample()">
+                    <option value="">Loading languages...</option>
+                </select>
+                <button class="swap-languages" onclick="swapLanguages()" title="Swap languages">
+                    ⇄
+                </button>
+                <select id="toLang" onchange="updateApiExample()">
+                    <option value="">Loading languages...</option>
+                </select>
+            </div>
+            
+            <label for="inputText">Text to translate:</label>
+            <textarea id="inputText" rows="6" onchange="updateApiExample()"></textarea>
+            
+            <button onclick="translateText()">Translate</button>
+        </div>
+
+        <div id="loading">
+            Translating... Please wait...
+        </div>
+
+        <div id="error" class="error"></div>
+
+        <div id="result" class="result" style="display: none;">
+            <label for="translatedText">Translation:</label>
+            <textarea id="translatedText" rows="6" readonly></textarea>
+        </div>
+
+        <div class="api-example">
+            <h3>API Example</h3>
+            <pre id="apiExample">// Select languages and enter text to see the API example</pre>
+            <button class="copy-button" onclick="copyApiExample()">Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <script>
+        // Load available languages on startup
+        window.onload = async function() {
+            try {
+                const response = await fetch('/languages');
+                if (!response.ok) throw new Error('Failed to fetch languages');
+                
+                const data = await response.json();
+                const fromLang = document.getElementById('fromLang');
+                const toLang = document.getElementById('toLang');
+                
+                // Clear loading options
+                fromLang.innerHTML = '';
+                toLang.innerHTML = '';
+                
+                // Add language options
+                data.available_languages.forEach(lang => {
+                    const option = document.createElement('option');
+                    option.value = lang.code;
+                    option.textContent = lang.name;
+                    fromLang.appendChild(option.cloneNode(true));
+                    toLang.appendChild(option);
+                });
+                
+                // Set English to Spanish as defaults
+                fromLang.value = 'en';
+                toLang.value = 'es';
+                
+                updateApiExample();
+            } catch (err) {
+                showError('Failed to load available languages');
+            }
+        };
+        
+        function swapLanguages() {
+            const fromLang = document.getElementById('fromLang');
+            const toLang = document.getElementById('toLang');
+            const temp = fromLang.value;
+            
+            fromLang.value = toLang.value;
+            toLang.value = temp;
+            
+            updateApiExample();
+        }
+        
+        async function translateText() {
+            const fromLang = document.getElementById('fromLang').value;
+            const toLang = document.getElementById('toLang').value;
+            const inputText = document.getElementById('inputText').value;
+            
+            if (!fromLang || !toLang) {
+                showError('Please select both languages');
+                return;
+            }
+            if (!inputText.trim()) {
+                showError('Please enter text to translate');
+                return;
+            }
+            
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+            
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            error.style.display = 'none';
+            
+            try {
+                const response = await fetch('/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: inputText,
+                        from_lang: fromLang,
+                        to_lang: toLang
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Translation failed');
+                }
+                
+                const data = await response.json();
+                displayResult(data);
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        function displayResult(data) {
+            document.getElementById('translatedText').value = data.translated_text;
+            document.getElementById('result').style.display = 'block';
+        }
+        
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.textContent = message;
+            error.style.display = 'block';
+        }
+        
+        function updateApiExample() {
+            const fromLang = document.getElementById('fromLang').value;
+            const toLang = document.getElementById('toLang').value;
+            const inputText = document.getElementById('inputText').value || 'Hello, world!';
+            
+            const example =
+`# Python example using requests library
+import requests
+import warnings
+warnings.filterwarnings('ignore') # For self-signed certificate
+
+url = "https://localhost:8000/translate"
+data = {
+    "text": "${inputText}",
+    "from_lang": "${fromLang}",
+    "to_lang": "${toLang}"
+}
+
+response = requests.post(url, json=data, verify=False)  # verify=False for self-signed cert
+result = response.json()
+print(f"Translation: {result['translated_text']}")
+
+# cURL example
+curl -X POST --insecure "https://localhost:8000/translate" \\
+    -H "Content-Type: application/json" \\
+    -d '{"text": "${inputText}", "from_lang": "${fromLang}", "to_lang": "${toLang}"}'`;
+            
+            document.getElementById('apiExample').textContent = example;
+        }
+        
+        function copyApiExample() {
+            const example = document.getElementById('apiExample').textContent;
+            navigator.clipboard.writeText(example).then(() => {
+                const copyButton = document.querySelector('.copy-button');
+                const originalText = copyButton.textContent;
+                copyButton.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyButton.textContent = originalText;
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
