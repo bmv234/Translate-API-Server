@@ -1,5 +1,7 @@
 # Translation API Server
 
+[![Docker Build and Push](https://github.com/bmv234/Translate-API-Server/actions/workflows/docker-build.yml/badge.svg)](https://github.com/owner/Translate-API-Server/actions/workflows/docker-build.yml)
+
 A simple REST API server that provides translation functionality using Argos Translate, with support for multiple languages and a web interface. Defaults to English to Spanish translation.
 
 ## Installation Options
